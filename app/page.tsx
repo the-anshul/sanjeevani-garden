@@ -19,6 +19,8 @@ export default function SanjeevaniGarden() {
   const [activeSection, setActiveSection] = useState("home")
   const [selectedHerb, setSelectedHerb] = useState<any>(null)
   const [isHerbModalOpen, setIsHerbModalOpen] = useState(false)
+  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" })
+  const [contactStatus, setContactStatus] = useState<"idle" | "submitting" | "success" | "error">("idle")
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -55,6 +57,29 @@ export default function SanjeevaniGarden() {
   const handleHerbClick = (herb: any) => {
     setSelectedHerb(herb)
     setIsHerbModalOpen(true)
+  }
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!contactForm.name || !contactForm.email || !contactForm.message) return
+    
+    setContactStatus("submitting")
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contactForm),
+      })
+      if (res.ok) {
+        setContactStatus("success")
+        setContactForm({ name: "", email: "", message: "" })
+        setTimeout(() => setContactStatus("idle"), 5000)
+      } else {
+        setContactStatus("error")
+      }
+    } catch {
+      setContactStatus("error")
+    }
   }
 
   const herbs = [
@@ -506,13 +531,20 @@ export default function SanjeevaniGarden() {
               <CardDescription className="text-gray-600">{t("contactFormDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <form className="space-y-6">
+              <form className="space-y-6" onSubmit={handleContactSubmit}>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                       👤 {t("name")}
                     </label>
-                    <Input id="name" placeholder={t("name")} className="border-blue-200 focus:border-blue-400" />
+                    <Input 
+                      id="name" 
+                      placeholder={t("name")} 
+                      className="border-blue-200 focus:border-blue-400" 
+                      value={contactForm.name}
+                      onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                      required
+                    />
                   </div>
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -523,6 +555,9 @@ export default function SanjeevaniGarden() {
                       type="email"
                       placeholder={t("email")}
                       className="border-blue-200 focus:border-blue-400"
+                      value={contactForm.email}
+                      onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                      required
                     />
                   </div>
                 </div>
@@ -535,13 +570,33 @@ export default function SanjeevaniGarden() {
                     placeholder={t("message")}
                     rows={5}
                     className="border-blue-200 focus:border-blue-400"
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                    required
                   />
                 </div>
+                
+                {contactStatus === "success" && (
+                  <div className="p-3 bg-green-50 text-green-700 border border-green-200 rounded-md text-sm text-center">
+                    Message sent successfully! We will get back to you soon.
+                  </div>
+                )}
+                {contactStatus === "error" && (
+                  <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-md text-sm text-center">
+                    Failed to send message. Please try again later.
+                  </div>
+                )}
+
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-blue-500 to-teal-600 hover:from-blue-600 hover:to-teal-700 shadow-lg text-white font-semibold"
+                  disabled={contactStatus === "submitting"}
+                  className="w-full bg-gradient-to-r from-blue-500 to-teal-600 hover:from-blue-600 hover:to-teal-700 shadow-lg text-white font-semibold flex items-center justify-center gap-2"
                 >
-                  📤 {t("sendMessage")}
+                  {contactStatus === "submitting" ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <>📤 {t("sendMessage")}</>
+                  )}
                 </Button>
               </form>
             </CardContent>

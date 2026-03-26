@@ -4,13 +4,15 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Leaf, ArrowLeft, ShoppingCart, Star, Truck, Shield, Heart } from "lucide-react"
+import { Leaf, ArrowLeft, ShoppingCart, Star, Truck, Shield, Heart, X, Plus, Minus } from "lucide-react"
 import { useLanguage } from "@/components/language-provider"
 import LanguageToggle from "@/components/language-toggle"
 
 export default function ShopPage() {
   const { t } = useLanguage()
   const [cart, setCart] = useState<any[]>([])
+  const [isCartOpen, setIsCartOpen] = useState(false)
+  const [checkoutStatus, setCheckoutStatus] = useState<"idle" | "processing" | "success">("idle")
 
   const plants = [
     {
@@ -128,7 +130,42 @@ export default function ShopPage() {
   ]
 
   const addToCart = (plant: any) => {
-    setCart([...cart, plant])
+    setCart((prev) => {
+      const existing = prev.find((item) => item.id === plant.id)
+      if (existing) {
+        return prev.map((item) => (item.id === plant.id ? { ...item, quantity: item.quantity + 1 } : item))
+      }
+      return [...prev, { ...plant, quantity: 1 }]
+    })
+    setIsCartOpen(true)
+  }
+
+  const updateQuantity = (id: number, delta: number) => {
+    setCart((prev) => prev.map((item) => {
+      if (item.id === id) {
+        const newQ = item.quantity + delta
+        return newQ > 0 ? { ...item, quantity: newQ } : item
+      }
+      return item
+    }))
+  }
+
+  const removeFromCart = (id: number) => {
+    setCart((prev) => prev.filter((item) => item.id !== id))
+  }
+
+  const cartTotal = cart.reduce((total, item) => total + item.price * item.quantity, 0)
+
+  const handleCheckout = () => {
+    setCheckoutStatus("processing")
+    setTimeout(() => {
+      setCheckoutStatus("success")
+      setCart([])
+      setTimeout(() => {
+        setCheckoutStatus("idle")
+        setIsCartOpen(false)
+      }, 3000)
+    }, 1500)
   }
 
   const goBack = () => {
@@ -157,14 +194,120 @@ export default function ShopPage() {
               <Button
                 variant="outline"
                 className="relative border-emerald-300 text-emerald-700 hover:bg-emerald-50 bg-transparent"
+                onClick={() => setIsCartOpen(true)}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
-                {t("cart")} ({cart.length})
+                {t("cart")} 
+                {cart.length > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-emerald-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {cart.reduce((total, item) => total + item.quantity, 0)}
+                  </span>
+                )}
               </Button>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Cart Drawer */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right-full duration-300">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-bold text-emerald-800 flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" /> Your Cart
+              </h2>
+              <Button variant="ghost" size="icon" onClick={() => setIsCartOpen(false)}>
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {cart.length === 0 && checkoutStatus === "idle" ? (
+                <div className="text-center py-12 text-gray-500">
+                  <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                  <p>Your cart is empty</p>
+                </div>
+              ) : checkoutStatus === "success" ? (
+                <div className="text-center py-12 text-emerald-600 animate-in fade-in zoom-in duration-300">
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Shield className="h-8 w-8 text-emerald-600" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">Order Placed Successfully!</h3>
+                  <p className="text-gray-600 text-sm">Thank you for shopping with Sanjeevani Garden. You will receive an email confirmation shortly.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {cart.map((item) => (
+                    <div key={item.id} className="flex gap-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <img src={item.image || "/placeholder.svg"} alt={item.name} className="w-20 h-20 object-cover rounded-md" />
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-semibold text-gray-800">{item.name}</h4>
+                          <button onClick={() => removeFromCart(item.id)} className="text-gray-400 hover:text-red-500">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <p className="text-sm font-bold text-emerald-600 mt-1">₹{item.price * item.quantity}</p>
+                        
+                        <div className="flex items-center gap-3 mt-2">
+                          <button 
+                            onClick={() => updateQuantity(item.id, -1)}
+                            className="w-6 h-6 flex items-center justify-center rounded-full bg-white border border-gray-300 shadow-sm hover:bg-gray-100"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
+                          <button 
+                            onClick={() => updateQuantity(item.id, 1)}
+                            className="w-6 h-6 flex items-center justify-center rounded-full bg-white border border-gray-300 shadow-sm hover:bg-gray-100"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {cart.length > 0 && checkoutStatus !== "success" && (
+              <div className="p-4 border-t bg-gray-50">
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Subtotal</span>
+                    <span>₹{cartTotal}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Delivery</span>
+                    <span className="text-emerald-600">Free</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg text-gray-800 pt-2 border-t">
+                    <span>Total</span>
+                    <span>₹{cartTotal}</span>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleCheckout} 
+                  disabled={checkoutStatus === "processing"}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg h-12 text-lg"
+                >
+                  {checkoutStatus === "processing" ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Processing...
+                    </div>
+                  ) : (
+                    "Proceed to Checkout"
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="py-16 bg-gradient-to-r from-emerald-600 to-green-700 text-white relative overflow-hidden">

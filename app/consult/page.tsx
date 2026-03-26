@@ -79,7 +79,7 @@ export default function ConsultPage() {
                     onClick={async () => {
                       try {
                         setSubmitting(true)
-                        const resp = await fetch('http://localhost:4000/api/health/consult-requests', {
+                        const resp = await fetch('/api/health/consult-requests', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ name, email, problem }),

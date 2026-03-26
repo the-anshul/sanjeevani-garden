@@ -3,8 +3,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-
+import cors from 'cors';
 
 // Load environment variables from .env
 // 1) Try process cwd .env (works when running from backend dir)
@@ -16,6 +15,16 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sanjeevani_garden';
+
+// CORS — allow frontend
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    process.env.FRONTEND_URL || '',
+  ].filter(Boolean),
+  credentials: true,
+}));
 
 // Built-in JSON parser
 app.use(express.json());

@@ -8,6 +8,7 @@ import Order from '../models/Order.js';
 import SymptomPlant from '../models/SymptomPlant.js';
 import HerbalPlant from '../models/HerbalPlant.js';
 import ConsultRequest from '../models/ConsultRequest.js';
+import ContactMessage from '../models/ContactMessage.js';
 import Feedback from '../models/Feedback.js';
 import Consultation from '../models/Consultation.js';
 import QuizQuestion from '../models/QuizQuestion.js';
@@ -340,6 +341,21 @@ router.get('/feedback', requireAuth, async (req, res, next) => {
   try {
     const list = await Feedback.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.json(list);
+  } catch (err) { next(err); }
+});
+
+// ===== PUBLIC CONTACT FORM =====
+const contactSchema = Joi.object({
+  name: Joi.string().min(2).required(),
+  email: Joi.string().email().required(),
+  message: Joi.string().min(5).required(),
+});
+router.post('/contact', async (req, res, next) => {
+  try {
+    const { value, error } = contactSchema.validate(req.body);
+    if (error) return res.status(400).json({ message: error.message });
+    const created = await ContactMessage.create(value);
+    res.status(201).json({ ok: true, id: created._id });
   } catch (err) { next(err); }
 });
 
